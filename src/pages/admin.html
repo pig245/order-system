@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        rel="stylesheet"
+        as="style"
+        crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+    />
+
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f1f5f9;
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-12 text-slate-800">
+
+<div class="max-w-6xl w-full mx-auto bg-white rounded-2xl shadow-xl border p-8">
+
+    <div class="text-center mb-6">
+        <div class="flex justify-between items-center gap-3">
+            <span class="w-16"></span>
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">관리자 대시보드</h1>
+            <button id="btnLogout" class="text-xs border rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">로그아웃</button>
+        </div>
+        <p class="text-slate-500 text-sm">발주 확정, 엑셀 다운로드, 품목 및 접속 링크를 관리합니다.</p>
+    </div>
+
+    <div class="mb-5 p-5 bg-slate-50 rounded-xl border">
+        <h2 class="text-md font-bold text-slate-700 mb-3">발주 확정 기간 설정</h2>
+        <div class="flex items-center gap-2 mb-3">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-slate-500 mb-1">시작일</label>
+                <div class="flex gap-1">
+                    <select id="startM" class="w-2/3 border rounded-lg px-2 py-2 text-sm bg-white">
+                        <option value="">선택</option>
+                        <option value="1월">1월</option>
+                        <option value="2월">2월</option>
+                        <option value="3월">3월</option>
+                        <option value="4월">4월</option>
+                        <option value="5월">5월</option>
+                        <option value="6월">6월</option>
+                        <option value="7월">7월</option>
+                        <option value="8월">8월</option>
+                        <option value="9월">9월</option>
+                        <option value="10월">10월</option>
+                        <option value="11월">11월</option>
+                        <option value="12월">12월</option>
+                    </select>
+                    <input id="startD" type="number" min="1" max="31" class="w-1/3 border rounded-lg px-2 py-2 text-sm bg-white" />
+                </div>
+            </div>
+            <span class="text-slate-400 font-bold mt-5">~</span>
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-slate-500 mb-1">종료일</label>
+                <div class="flex gap-1">
+                    <select id="endM" class="w-2/3 border rounded-lg px-2 py-2 text-sm bg-white">
+                        <option value="">선택</option>
+                        <option value="1월">1월</option>
+                        <option value="2월">2월</option>
+                        <option value="3월">3월</option>
+                        <option value="4월">4월</option>
+                        <option value="5월">5월</option>
+                        <option value="6월">6월</option>
+                        <option value="7월">7월</option>
+                        <option value="8월">8월</option>
+                        <option value="9월">9월</option>
+                        <option value="10월">10월</option>
+                        <option value="11월">11월</option>
+                        <option value="12월">12월</option>
+                    </select>
+                    <input id="endD" type="number" min="1" max="31" class="w-1/3 border rounded-lg px-2 py-2 text-sm bg-white" />
+                </div>
+            </div>
+        </div>
+        <button id="btnCheck" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm">내역 확인 및 확정</button>
+    </div>
+
+    <div class="mb-5 p-5 bg-emerald-50 rounded-xl border border-emerald-100">
+        <h2 class="text-md font-bold text-emerald-800 mb-2">엑셀 다운로드</h2>
+        <p class="text-xs text-slate-500 mb-3">위의 발주 확정 기간을 기준으로 확정된 내역만 다운로드합니다.</p>
+        <button id="btnDownload" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-semibold">엑셀 다운로드 (.XLSX)</button>
+    </div>
+
+    <div class="mb-5 p-5 bg-purple-50 rounded-xl border border-purple-100">
+        <h2 class="text-md font-bold text-purple-800 mb-2">품목 및 거래처 매칭</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button id="btnOpenProductModal" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-sm font-semibold">신규 품목 추가</button>
+            <label class="w-full bg-white border border-purple-200 text-purple-800 py-2.5 rounded-lg text-sm font-semibold text-center cursor-pointer">
+                유종 매칭표 CSV 업로드
+                <input id="matchingCsvFile" type="file" accept=".csv,text/csv" class="hidden" />
+            </label>
+        </div>
+        <p class="text-xs text-slate-500 mt-2">CSV 헤더 예: 품명,유종,제한 거래처</p>
+    </div>
+
+    <div class="mb-5 p-5 bg-rose-50 rounded-xl border border-rose-100">
+        <h2 class="text-md font-bold text-rose-800 mb-2">관리자 비밀번호 변경</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="adminCurrentPassword" type="password" placeholder="현재 비밀번호" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="adminNewPassword" type="password" placeholder="새 비밀번호(4자 이상)" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <button id="btnChangeAdminPassword" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg text-sm font-semibold">관리자 비밀번호 변경</button>
+        </div>
+        <p class="text-xs text-slate-500 mt-2">초기 관리자 비밀번호는 1111 입니다.</p>
+    </div>
+
+    <div class="mb-5 p-5 bg-amber-50 rounded-xl border border-amber-100">
+        <h2 class="text-md font-bold text-amber-800 mb-2">거래처 접속 링크 관리</h2>
+        <p class="text-xs text-slate-500 mb-4">최초 접속용 링크와 초기 비밀번호를 발급합니다. 이후 거래처는 거래처명과 비밀번호로 로그인할 수 있습니다.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+            <input id="newClientName" type="text" maxlength="100" placeholder="거래처명(필수)" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="newClientPassword" type="password" maxlength="100" placeholder="초기 비밀번호(비우면 1111)" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="newClientLabel" type="text" maxlength="100" placeholder="별칭(선택)" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="newClientAllowedRegions" type="text" maxlength="500" placeholder="허용 지역(선택) 예: 강원, 부산" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+        </div>
+        <p class="text-xs text-slate-500 mb-3">허용 지역을 비워두면 모든 지역 발주가 가능합니다.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button id="btnCreateClientToken" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-lg text-sm font-semibold">거래처 링크 생성</button>
+            <button id="btnResetClientPassword" class="w-full bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-semibold">비밀번호 재설정</button>
+            <button id="btnSaveClientRegions" class="w-full bg-cyan-700 hover:bg-cyan-800 text-white py-2.5 rounded-lg text-sm font-semibold">지역락 저장/변경</button>
+        </div>
+        <div id="newTokenResult" class="hidden mt-4 bg-white border rounded-lg p-4">
+            <p class="text-xs font-semibold text-slate-500 mb-2">새 거래처 링크</p>
+            <textarea id="newTokenUrl" readonly rows="4" class="w-full border rounded-lg p-2 text-xs bg-slate-50 break-all"></textarea>
+            <div class="flex gap-2 mt-2">
+                <button id="btnCopyTokenUrl" class="flex-1 bg-slate-800 text-white rounded-lg py-2 text-sm">링크 복사</button>
+                <button id="btnCloseTokenResult" class="flex-1 border rounded-lg py-2 text-sm">닫기</button>
+            </div>
+            <p id="newTokenWarning" class="mt-3 text-xs text-red-600 whitespace-pre-line"></p>
+        </div>
+    </div>
+
+    <div class="mb-5 p-5 bg-cyan-50 rounded-xl border border-cyan-100">
+        <h2 class="text-md font-bold text-cyan-800 mb-2">지역별 로그인 계정</h2>
+        <p class="text-xs text-slate-500 mb-4">모든 거래처에 별도의 로그인 ID/비밀번호를 발급할 수 있습니다. 지역계정은 로그인한 지역만 발주 가능합니다.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+            <input id="coAccountClient" type="text" maxlength="100" placeholder="거래처" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="coAccountRegion" type="text" maxlength="50" placeholder="지역" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="coAccountLoginId" type="text" maxlength="100" placeholder="ID 예:경일_강원" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+            <input id="coAccountPassword" type="password" maxlength="100" placeholder="비밀번호(비우면 1111)" class="border rounded-lg px-3 py-2.5 text-sm w-full" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+            <button id="btnCreateCoAccount" class="w-full bg-cyan-700 hover:bg-cyan-800 text-white py-2.5 rounded-lg text-sm font-semibold">지역별 계정 생성</button>
+            <button id="btnRefreshCoAccounts" class="w-full border border-cyan-300 text-cyan-800 hover:bg-cyan-100 py-2.5 rounded-lg text-sm font-semibold">계정 목록 새로고침</button>
+        </div>
+        <div id="coAccountResult" class="hidden bg-white border rounded-lg p-4 mb-4">
+            <p class="text-xs font-semibold text-slate-500 mb-2">생성된 지역별 계정 접속 링크</p>
+            <textarea id="coAccountUrl" readonly rows="3" class="w-full border rounded-lg p-2 text-xs bg-slate-50 break-all"></textarea>
+            <p id="coAccountWarning" class="mt-2 text-xs text-cyan-700 whitespace-pre-line"></p>
+            <button id="btnCopyCoAccountUrl" class="mt-2 w-full bg-slate-800 text-white rounded-lg py-2 text-sm">링크 복사</button>
+        </div>
+        <div class="overflow-x-auto bg-white rounded-lg border">
+            <table class="w-full text-sm text-slate-600">
+                <thead class="bg-slate-100">
+                <tr>
+                    <th class="px-3 py-2 border-b text-left">거래처</th>
+                    <th class="px-3 py-2 border-b text-left">지역</th>
+                    <th class="px-3 py-2 border-b text-left">로그인 ID</th>
+                    <th class="px-3 py-2 border-b text-center">상태</th>
+                    <th class="px-3 py-2 border-b text-center">작업</th>
+                </tr>
+                </thead>
+                <tbody id="coAccountListBody">
+                    <tr><td colspan="5" class="text-center py-6 text-slate-400">불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mb-5 p-5 bg-slate-50 rounded-xl border">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-md font-bold text-slate-700">발급된 접속 토큰</h2>
+            <button id="btnRefreshTokens" class="text-sm text-blue-600 font-semibold">새로고침</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-slate-600">
+                <thead class="bg-white">
+                <tr>
+                    <th class="px-3 py-2 border-b text-left">권한</th>
+                    <th class="px-3 py-2 border-b text-left">거래처</th>
+                    <th class="px-3 py-2 border-b text-left">라벨</th>
+                    <th class="px-3 py-2 border-b text-left">허용 지역</th>
+                    <th class="px-3 py-2 border-b text-center">상태</th>
+                    <th class="px-3 py-2 border-b text-center">작업</th>
+                </tr>
+                </thead>
+                <tbody id="tokenListBody">
+                <tr><td colspan="6" class="text-center py-8 text-slate-400">불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="p-5 bg-indigo-50 rounded-xl border border-indigo-100">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-md font-bold text-indigo-800">D1 데이터베이스 관리</h2>
+            <a id="btnOpenDb" href="/db?token=" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold no-underline">D1 관리 열기</a>
+        </div>
+        <p class="text-xs text-slate-500">D1 테이블 조회·수정은 별도 페이지에서 수행합니다.</p>
+    </div>
+</div>
+
+<div id="addProductModal" class="fixed inset-0 bg-slate-900 bg-opacity-40 hidden flex justify-center items-center z-[50]">
+    <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-sm overflow-hidden">
+        <div class="bg-purple-700 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="font-bold">신규 품목 추가</h3>
+            <button class="close-modal-btn">✕</button>
+        </div>
+        <div class="p-6 bg-slate-50 flex flex-col gap-3">
+            <input id="newProductName" type="text" placeholder="품명 (필수) 예: 하이골드" class="border rounded-lg px-3 py-2.5" />
+            <input id="newOilType" type="text" placeholder="유종 (선택) 예: 대두" class="border rounded-lg px-3 py-2.5" />
+            <input id="newProductClients" type="text" placeholder="거래처 (예:경일, 씨오 // 성규, 씨오)" class="border rounded-lg px-3 py-2.5" />
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
+            <button class="close-modal-btn px-5 py-2 border rounded-lg bg-slate-50">취소</button>
+            <button id="btnSaveProduct" class="px-6 py-2 bg-purple-600 text-white rounded-lg font-semibold">추가하기</button>
+        </div>
+    </div>
+</div>
+
+<div id="previewModal" class="fixed inset-0 bg-slate-900 bg-opacity-40 hidden flex justify-center items-center z-[40]">
+    <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="font-bold">확정 대상 내역 (<span id="modalCount">0</span>건)</h3>
+            <button class="close-modal-btn">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto bg-slate-50 flex-1">
+            <div id="totalSummaryBox" class="bg-white p-4 rounded-xl border flex flex-wrap gap-3 mb-4"></div>
+            <table class="w-full text-left text-sm border bg-white">
+                <thead class="bg-slate-100">
+                <tr>
+                    <th class="px-4 py-2 border-b">날짜</th>
+                    <th class="px-4 py-2 border-b">거래처</th>
+                    <th class="px-4 py-2 border-b">품명</th>
+                    <th class="px-4 py-2 border-b">유종</th>
+                    <th class="px-4 py-2 border-b text-right">수량</th>
+                </tr>
+                </thead>
+                <tbody id="modalTableBody"></tbody>
+            </table>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
+            <button class="close-modal-btn px-5 py-2 border rounded-lg">취소</button>
+            <button id="btnExecuteConfirm" class="px-6 py-2 bg-blue-600 text-white rounded-lg">확정하기</button>
+        </div>
+    </div>
+</div>
+
+<div id="customAlertModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex justify-center items-center z-[9999]">
+    <div class="bg-white rounded-xl w-11/12 max-w-sm text-center">
+        <p id="customAlertMessage" class="p-6 font-medium whitespace-pre-line"></p>
+        <button id="alertOkButton" class="w-full py-3 bg-blue-600 text-white font-bold rounded-b-xl">확인</button>
+    </div>
+</div>
+
+<div id="customConfirmModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex justify-center items-center z-[9999]">
+    <div class="bg-white rounded-xl w-11/12 max-w-sm text-center">
+        <p id="customConfirmMessage" class="p-6 font-medium whitespace-pre-line"></p>
+        <div class="flex border-t">
+            <button id="confirmCancelButton" class="flex-1 py-3 bg-slate-50 border-r rounded-bl-xl text-slate-600">취소</button>
+            <button id="confirmOkButton" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-br-xl">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const WEB_APP_URL = window.location.origin;
+let ADMIN_TOKEN = '';
+const state = {
+    currentPeriod: null,
+    lastConfirmedPeriod: null,
+    confirmCallback: null
+};
+
+function $(id) { return document.getElementById(id); }
+function safeOn(id, event, callback) { const el = $(id); if (el) el.addEventListener(event, callback); }
+function toggleModal(id, show) { const element = $(id); if (element) element.classList.toggle('hidden', !show); }
+function setLoading(element, loading, normalText) {
+    if (!element) return;
+    element.disabled = loading;
+    element.textContent = loading ? '처리 중...' : normalText;
+}
+function escapeHtml(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function showAlert(message) { const msgEl = $('customAlertMessage'); if (msgEl) msgEl.textContent = message; toggleModal('customAlertModal', true); }
+function showConfirm(message, callback) { const msgEl = $('customConfirmMessage'); if (msgEl) msgEl.textContent = message; state.confirmCallback = callback; toggleModal('customConfirmModal', true); }
+function closeAlert() { toggleModal('customAlertModal', false); }
+function closeConfirm(result) {
+    toggleModal('customConfirmModal', false);
+    const callback = state.confirmCallback;
+    state.confirmCallback = null;
+    if (result && typeof callback === 'function') callback();
+}
+function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_TOKEN, 'X-Auth-Token': ADMIN_TOKEN };
+}
+async function api(path, options = {}) {
+    const res = await fetch(path, { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) throw new Error(data.message || '요청 처리 중 오류가 발생했습니다.');
+    return data;
+}
+
+function collectPeriod() {
+    return { startM: $('startM')?.value || '', startD: $('startD')?.value || '', endM: $('endM')?.value || '', endD: $('endD')?.value || '' };
+}
+function validatePeriodClientSide(period) {
+    if ((period.startM && !period.startD) || (!period.startM && period.startD)) { showAlert('시작일의 월과 일을 모두 입력해주세요.'); return false; }
+    if (!period.startM && !period.startD && !period.endM && !period.endD) return true;
+    if (period.endD && !period.endM) { showAlert('종료일의 월과 일을 모두 입력해주세요.'); return false; }
+    return true;
+}
+
+async function openPreviewModal() {
+    const period = collectPeriod();
+    if (!validatePeriodClientSide(period)) return;
+    const btnCheck = $('btnCheck');
+    setLoading(btnCheck, true, '내역 확인 및 확정');
+    try {
+        const params = new URLSearchParams(period);
+        const result = await api('/api/admin/orders?' + params.toString());
+        if (!result.hasData) { showAlert('데이터가 없습니다.'); return; }
+        state.currentPeriod = period;
+        renderPeriodPreview(result);
+        toggleModal('previewModal', true);
+    } catch (error) {
+        showAlert('조회 오류\n' + (error.message || error));
+    } finally {
+        setLoading(btnCheck, false, '내역 확인 및 확정');
+    }
+}
+
+function renderPeriodPreview(result) {
+    const modalCount = $('modalCount');
+    if (modalCount) modalCount.textContent = (result.count || 0).toLocaleString();
+    const summaryBox = $('totalSummaryBox');
+    if (summaryBox) {
+        summaryBox.innerHTML = Object.entries(result.totals || {}).map(([product, qty]) => `
+            <div class="bg-blue-50 border px-3 py-2 rounded-lg">
+                <span class="text-xs text-slate-500">${escapeHtml(product)}</span><br />
+                <strong class="text-blue-700">${escapeHtml(qty)}개</strong>
+            </div>`).join('');
+    }
+    const tableBody = $('modalTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = (result.summary || []).map((item) => `
+            <tr>
+                <td class="px-4 py-2 border-b">${escapeHtml(item.date)}</td>
+                <td class="px-4 py-2 border-b">${escapeHtml(item.client)}</td>
+                <td class="px-4 py-2 border-b">${escapeHtml(item.product)}</td>
+                <td class="px-4 py-2 border-b">${escapeHtml(item.oil || '')}</td>
+                <td class="px-4 py-2 border-b text-right">${escapeHtml(item.qty)}개 ${item.isConfirmed ? '<span class="text-amber-600 text-xs">(확정)</span>' : ''} ${item.oil === '미등록' ? '<span class="text-red-600 text-xs">(미등록)</span>' : ''}</td>
+            </tr>`).join('');
+    }
+}
+
+function executeConfirm() {
+    if (!state.currentPeriod) { showAlert('확정 대상 기간이 없습니다.'); return; }
+    showConfirm('정말 확정하시겠습니까?\n이후 수정/삭제할 수 없습니다.', async () => {
+        const btnExec = $('btnExecuteConfirm');
+        setLoading(btnExec, true, '확정하기');
+        const period = state.currentPeriod;
+        try {
+            const result = await api('/api/admin/orders/confirm', { method: 'POST', body: JSON.stringify(period) });
+            toggleModal('previewModal', false);
+            state.lastConfirmedPeriod = { ...period };
+            state.currentPeriod = null;
+            ['startM', 'startD', 'endM', 'endD'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+            showAlert(`${result.count}건 확정 완료`);
+        } catch (error) {
+            showAlert('확정 오류\n' + (error.message || error));
+        } finally {
+            setLoading(btnExec, false, '확정하기');
+        }
+    });
+}
+
+async function downloadExcel() {
+    let period = collectPeriod();
+    if (!period.startM && !period.startD && !period.endM && !period.endD && state.lastConfirmedPeriod) period = { ...state.lastConfirmedPeriod };
+    if (!validatePeriodClientSide(period)) return;
+    if (!period.startM && !period.endM) { showAlert('엑셀 다운로드를 위해 다운로드할 기간을 입력해주세요.'); return; }
+    const button = $('btnDownload');
+    setLoading(button, true, '엑셀 다운로드 (.XLSX)');
+    try {
+        const params = new URLSearchParams(period);
+        const result = await api('/api/admin/excel?' + params.toString());
+        if (!result.success) { showAlert(result.message || '다운로드할 내역이 없습니다.'); return; }
+        const binary = atob(result.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = result.fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        showAlert('엑셀 다운로드 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '엑셀 다운로드 (.XLSX)');
+    }
+}
+
+function openProductModal() { toggleModal('addProductModal', true); }
+
+async function saveNewProduct() {
+    const product = $('newProductName')?.value.trim() || '';
+    const oil = $('newOilType')?.value.trim() || '';
+    const clients = $('newProductClients')?.value.trim() || '';
+    const button = $('btnSaveProduct');
+    if (!product) { showAlert('품목을 입력해주세요.'); return; }
+    setLoading(button, true, '추가하기');
+    try {
+        const result = await api('/api/admin/products', { method: 'POST', body: JSON.stringify({ product, oil, clients }) });
+        if (!result.success) { showAlert(result.message); return; }
+        ['newProductName', 'newOilType', 'newProductClients'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+        toggleModal('addProductModal', false);
+        showAlert('추가 완료');
+    } catch (error) {
+        showAlert('품목 추가 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '추가하기');
+    }
+}
+
+async function importMatchingCsv(file) {
+    const text = await file.text();
+    try {
+        const result = await api('/api/admin/products/import', { method: 'POST', body: JSON.stringify({ csv: text }) });
+        showAlert(`유종 매칭표 ${result.count}건을 업로드했습니다.`);
+    } catch (error) {
+        showAlert('CSV 업로드 오류\n' + (error.message || error));
+    }
+}
+
+async function createClientToken() {
+    const client = $('newClientName')?.value.trim() || '';
+    const label = $('newClientLabel')?.value.trim() || '';
+    const password = $('newClientPassword')?.value.trim() || '';
+    const allowedRegions = $('newClientAllowedRegions')?.value.trim() || '';
+    const button = $('btnCreateClientToken');
+    if (!client) { showAlert('거래처명을 입력해주세요.'); return; }
+    setLoading(button, true, '거래처 링크 생성');
+    try {
+        const result = await api('/api/admin/clients', { method: 'POST', body: JSON.stringify({ clientName: client, label, password, allowedRegions }) });
+        const urlEl = $('newTokenUrl');
+        if (urlEl) urlEl.value = result.url || result.token;
+        const warnEl = $('newTokenWarning');
+        if (warnEl) warnEl.textContent = result.warning || '';
+        const resEl = $('newTokenResult');
+        if (resEl) resEl.classList.remove('hidden');
+        ['newClientName', 'newClientLabel', 'newClientPassword', 'newClientAllowedRegions'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+        refreshTokenList();
+    } catch (error) {
+        showAlert('토큰 생성 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '거래처 링크 생성');
+    }
+}
+
+async function saveClientRegions() {
+    const client = $('newClientName')?.value.trim() || '';
+    const allowedRegions = $('newClientAllowedRegions')?.value.trim() || '';
+    const button = $('btnSaveClientRegions');
+    if (!client) { showAlert('거래처명을 입력해주세요.'); return; }
+    setLoading(button, true, '지역락 저장/변경');
+    try {
+        const result = await api('/api/admin/clients/regions', { method: 'POST', body: JSON.stringify({ clientName: client, allowedRegions }) });
+        showAlert(result.allowedRegions && result.allowedRegions.length ? `${result.client} 허용 지역: ${result.allowedRegions.join(', ')}` : `${result.client} 지역 제한을 해제했습니다. 모든 지역 발주가 가능합니다.`);
+        refreshTokenList();
+    } catch (error) {
+        showAlert('지역락 저장 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '지역락 저장/변경');
+    }
+}
+
+async function resetClientPassword() {
+    const client = $('newClientName')?.value.trim() || '';
+    const password = $('newClientPassword')?.value.trim() || '';
+    const button = $('btnResetClientPassword');
+    if (!client || !password) { showAlert('거래처명과 새 비밀번호를 입력해주세요.'); return; }
+    setLoading(button, true, '비밀번호 재설정');
+    try {
+        await api('/api/admin/clients/password', { method: 'POST', body: JSON.stringify({ clientName: client, password }) });
+        $('newClientPassword').value = '';
+        showAlert('거래처 비밀번호를 재설정했습니다.');
+    } catch (error) {
+        showAlert('비밀번호 재설정 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '비밀번호 재설정');
+    }
+}
+
+async function changeAdminPassword() {
+    const currentPassword = $('adminCurrentPassword')?.value.trim() || '';
+    const newPassword = $('adminNewPassword')?.value.trim() || '';
+    const button = $('btnChangeAdminPassword');
+    if (!newPassword) { showAlert('새 비밀번호를 입력해주세요.'); return; }
+    setLoading(button, true, '관리자 비밀번호 변경');
+    try {
+        await api('/api/admin/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+        $('adminCurrentPassword').value = '';
+        $('adminNewPassword').value = '';
+        showAlert('관리자 비밀번호를 변경했습니다.');
+    } catch (error) {
+        showAlert('관리자 비밀번호 변경 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '관리자 비밀번호 변경');
+    }
+}
+
+async function createCoAccount() {
+    const client = $('coAccountClient')?.value.trim() || '';
+    const region = $('coAccountRegion')?.value.trim() || '';
+    const loginId = $('coAccountLoginId')?.value.trim() || '';
+    const password = $('coAccountPassword')?.value.trim() || '';
+    const button = $('btnCreateCoAccount');
+    if (!client || !region || !loginId) { showAlert('거래처, 지역, 로그인 ID를 입력해주세요.'); return; }
+    setLoading(button, true, '지역별 계정 생성');
+    try {
+        const result = await api('/api/admin/accounts', { method: 'POST', body: JSON.stringify({ clientName: client, region, loginId, password }) });
+        $('coAccountClient').value = '';
+        $('coAccountRegion').value = '';
+        $('coAccountLoginId').value = '';
+        $('coAccountPassword').value = '';
+        $('coAccountUrl').value = result.url || '';
+        $('coAccountWarning').textContent = result.warning || '';
+        $('coAccountResult').classList.remove('hidden');
+        refreshCoAccounts();
+    } catch (error) {
+        showAlert('지역계정 생성 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '지역별 계정 생성');
+    }
+}
+
+async function refreshCoAccounts() {
+    try {
+        const accounts = await api('/api/admin/accounts');
+        renderCoAccounts(accounts);
+    } catch (error) {
+        if ($('coAccountListBody')) $('coAccountListBody').innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">${escapeHtml(error.message || error)}</td></tr>`;
+    }
+}
+
+function renderCoAccounts(accounts) {
+    const body = $('coAccountListBody');
+    if (!body) return;
+    if (!accounts || !accounts.length) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">등록된 지역계정이 없습니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = accounts.map((account) => {
+        const status = account.active ? '활성' : '중지';
+        const statusClass = account.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+        return `<tr>
+            <td class="px-3 py-2 border-b">${escapeHtml(account.client || '-')}</td>
+            <td class="px-3 py-2 border-b">${escapeHtml(account.region)}</td>
+            <td class="px-3 py-2 border-b font-mono text-xs">${escapeHtml(account.loginId)}</td>
+            <td class="px-3 py-2 border-b text-center"><span class="px-2 py-1 rounded text-xs ${statusClass}">${status}</span></td>
+            <td class="px-3 py-2 border-b text-center whitespace-nowrap">
+                <button class="btn-reset-co-account text-blue-600 text-xs font-semibold mr-2" data-id="${escapeHtml(account.accountId)}" data-region="${escapeHtml(account.region)}">비밀번호</button>
+                <button class="btn-toggle-co-account ${account.active ? 'text-red-600' : 'text-green-600'} text-xs font-semibold" data-id="${escapeHtml(account.accountId)}" data-active="${account.active ? '1' : '0'}">${account.active ? '중지' : '활성화'}</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function resetCoAccountPassword(button) {
+    const accountId = button.dataset.id;
+    const region = button.dataset.region || '';
+    const password = window.prompt(region + ' 지역 계정의 새 비밀번호를 입력하세요.');
+    if (password == null) return;
+    if (!password.trim()) { showAlert('새 비밀번호를 입력해주세요.'); return; }
+    api('/api/admin/accounts/' + encodeURIComponent(accountId) + '/password', {
+        method: 'POST',
+        body: JSON.stringify({ password })
+    }).then((result) => {
+        if (result && result.success) showAlert(region + ' 지역 계정의 비밀번호를 재설정했습니다. 기존 로그인 토큰도 폐기되었습니다.');
+        else showAlert(result?.message || '비밀번호 재설정 실패');
+        refreshCoAccounts();
+    }).catch((error) => showAlert('비밀번호 재설정 오류\n' + (error.message || error)));
+}
+
+function toggleCoAccount(button) {
+    const accountId = button.dataset.id;
+    const active = button.dataset.active !== '1';
+    const action = active ? '활성화' : '중지';
+    showConfirm('이 지역계정을 ' + action + '할까요?', () => {
+        api('/api/admin/accounts/' + encodeURIComponent(accountId) + '/active', {
+            method: 'POST',
+            body: JSON.stringify({ active })
+        }).then((result) => {
+            if (result && result.success) {
+                showAlert('계정이 ' + action + '되었습니다.');
+                refreshCoAccounts();
+            } else showAlert(result?.message || '처리에 실패했습니다.');
+        }).catch((error) => showAlert('계정 상태 변경 오류\n' + (error.message || error)));
+    });
+}
+
+async function copyCoAccountUrl() {
+    const value = $('coAccountUrl')?.value || '';
+    if (!value) { showAlert('복사할 링크가 없습니다.'); return; }
+    try { await navigator.clipboard.writeText(value); showAlert('링크를 복사했습니다.'); }
+    catch (e) { $('coAccountUrl').select(); document.execCommand('copy'); showAlert('링크를 복사했습니다.'); }
+}
+
+async function copyTokenUrl() {
+    const urlEl = $('newTokenUrl');
+    const value = urlEl ? urlEl.value : '';
+    if (!value) { showAlert('복사할 링크가 없습니다.'); return; }
+    try { await navigator.clipboard.writeText(value); showAlert('링크가 클립보드에 복사되었습니다.'); }
+    catch (error) { if (urlEl) urlEl.select(); document.execCommand('copy'); showAlert('링크를 복사했습니다.'); }
+}
+
+async function refreshTokenList() {
+    const listBody = $('tokenListBody');
+    if (listBody) listBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">불러오는 중...</td></tr>`;
+    if (!ADMIN_TOKEN) {
+        if (listBody) listBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500">관리자 토큰이 없습니다. 다시 로그인해 주세요.</td></tr>`;
+        return;
+    }
+    try {
+        renderTokenList(await api('/api/admin/tokens'));
+    } catch (error) {
+        if (listBody) listBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500">${escapeHtml(error.message || error)}</td></tr>`;
+    }
+}
+
+function renderTokenList(tokens) {
+    const listBody = $('tokenListBody');
+    if (!listBody) return;
+    if (!tokens || !tokens.length) {
+        listBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">발급된 토큰이 없습니다.</td></tr>`;
+        return;
+    }
+    listBody.innerHTML = tokens.map((token) => {
+        const statusClass = token.status === '활성' ? 'bg-green-100 text-green-700' : token.status === '폐기' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700';
+        const action = token.status === '활성'
+            ? `<button class="btn-revoke-token text-red-600 text-xs font-semibold" data-id="${escapeHtml(token.tokenId)}">폐기</button>`
+            : '<span class="text-slate-400 text-xs">-</span>';
+        return `<tr>
+            <td class="px-3 py-2 border-b">${escapeHtml(token.role)}</td>
+            <td class="px-3 py-2 border-b">${escapeHtml(token.client || '-')}</td>
+            <td class="px-3 py-2 border-b">${escapeHtml(token.label || '-')}</td>
+            <td class="px-3 py-2 border-b">${escapeHtml((token.allowedRegions || []).length ? token.allowedRegions.join(', ') : '전체')}</td>
+            <td class="px-3 py-2 border-b text-center"><span class="px-2 py-1 rounded text-xs ${statusClass}">${escapeHtml(token.status)}</span></td>
+            <td class="px-3 py-2 border-b text-center">${action}</td>
+        </tr>`;
+    }).join('');
+}
+
+function handleRevokeToken(button) {
+    const tokenId = button.dataset.id;
+    showConfirm('이 접속 토큰을 폐기할까요?\n폐기 후에는 링크가 즉시 사용할 수 없게 됩니다.', () => {
+        api('/api/admin/tokens/' + encodeURIComponent(tokenId) + '/revoke', { method: 'POST', body: JSON.stringify({}) })
+            .then((result) => { if (result.success) { showAlert('토큰을 폐기했습니다.'); refreshTokenList(); } else showAlert(result.message); })
+            .catch((error) => showAlert('토큰 폐기 오류\n' + (error.message || error)));
+    });
+}
+
+async function handleLogout() {
+    try { await api('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) }); } catch (error) {}
+    sessionStorage.removeItem('adminToken');
+    window.location.href = WEB_APP_URL + '/login';
+}
+
+function initializeEvents() {
+    safeOn('alertOkButton', 'click', closeAlert);
+    safeOn('confirmCancelButton', 'click', () => closeConfirm(false));
+    safeOn('confirmOkButton', 'click', () => closeConfirm(true));
+    document.querySelectorAll('.close-modal-btn').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            const modal = event.target.closest('.fixed');
+            if (modal) toggleModal(modal.id, false);
+        });
+    });
+    safeOn('btnCheck', 'click', openPreviewModal);
+    safeOn('btnExecuteConfirm', 'click', executeConfirm);
+    safeOn('btnDownload', 'click', downloadExcel);
+    safeOn('btnOpenProductModal', 'click', openProductModal);
+    safeOn('btnSaveProduct', 'click', saveNewProduct);
+    safeOn('btnCreateClientToken', 'click', createClientToken);
+    safeOn('btnCreateCoAccount', 'click', createCoAccount);
+    safeOn('btnRefreshCoAccounts', 'click', refreshCoAccounts);
+    safeOn('btnCopyCoAccountUrl', 'click', copyCoAccountUrl);
+    safeOn('btnResetClientPassword', 'click', resetClientPassword);
+    safeOn('btnSaveClientRegions', 'click', saveClientRegions);
+    safeOn('btnChangeAdminPassword', 'click', changeAdminPassword);
+    safeOn('btnLogout', 'click', handleLogout);
+    safeOn('btnCopyTokenUrl', 'click', copyTokenUrl);
+    safeOn('btnCloseTokenResult', 'click', () => {
+        toggleModal('newTokenResult', false);
+        const urlEl = $('newTokenUrl'); if (urlEl) urlEl.value = '';
+        const warnEl = $('newTokenWarning'); if (warnEl) warnEl.textContent = '';
+    });
+    safeOn('btnRefreshTokens', 'click', refreshTokenList);
+    safeOn('matchingCsvFile', 'change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (file) importMatchingCsv(file);
+        event.target.value = '';
+    });
+    const tokenListBody = $('tokenListBody');
+    if (tokenListBody) {
+        tokenListBody.addEventListener('click', (event) => {
+            const revokeButton = event.target.closest('.btn-revoke-token');
+            if (revokeButton) handleRevokeToken(revokeButton);
+        });
+    }
+    const coAccountListBody = $('coAccountListBody');
+    if (coAccountListBody) {
+        coAccountListBody.addEventListener('click', (event) => {
+            const resetButton = event.target.closest('.btn-reset-co-account');
+            if (resetButton) resetCoAccountPassword(resetButton);
+            const toggleButton = event.target.closest('.btn-toggle-co-account');
+            if (toggleButton) toggleCoAccount(toggleButton);
+        });
+    }
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+    initializeEvents();
+    const params = new URLSearchParams(window.location.search);
+    ADMIN_TOKEN = params.get('token') || sessionStorage.getItem('adminToken') || '';
+    if (!ADMIN_TOKEN) {
+        window.location.href = WEB_APP_URL + '/login';
+        return;
+    }
+    try {
+        const session = await api('/api/session');
+        if (session.role !== 'ADMIN') throw new Error('관리자 토큰이 아닙니다.');
+        sessionStorage.setItem('adminToken', ADMIN_TOKEN);
+        // "D1 관리 열기" 버튼에 토큰 포함
+        const btnOpenDb = $('btnOpenDb');
+        if (btnOpenDb) btnOpenDb.href = '/db?token=' + encodeURIComponent(ADMIN_TOKEN);
+        refreshTokenList();
+        refreshCoAccounts();
+    } catch (error) {
+        sessionStorage.removeItem('adminToken');
+        window.location.href = WEB_APP_URL + '/login';
+    }
+});
+</script>
+</body>
+</html>

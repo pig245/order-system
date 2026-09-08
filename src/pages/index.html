@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>발주 관리 시스템</title>
+
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link
+        rel="stylesheet"
+        as="style"
+        crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+        />
+
+        <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        </style>
+    </head>
+
+    <body class="p-6 md:p-12 text-slate-800">
+
+        <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+
+            <div class="bg-blue-600 px-8 py-5 text-white flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold">한산 전용 발주 관리 시스템</h1>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-700 px-4 py-2 rounded-xl border border-blue-500 text-sm font-semibold">
+                        접속 거래처:
+                        <span id="badgeName" class="text-yellow-300"></span>
+                        <span id="badgeRegion" class="text-cyan-200"></span>
+                    </div>
+                    <button
+                    id="btnChangePassword"
+                    class="text-xs bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-xl border border-blue-500 text-slate-200 transition-colors"
+                    >
+                    비밀번호 변경
+                </button>
+                <button
+                id="btnLogout"
+                class="text-xs bg-blue-800 hover:bg-blue-900 px-3 py-2 rounded-xl border border-blue-600 text-slate-200 transition-colors"
+                >
+                로그아웃
+            </button>
+        </div>
+    </div>
+
+    <div id="orderWindowStatus" class="mx-8 mt-4 rounded-lg border px-4 py-3 text-sm font-semibold bg-slate-50 border-slate-200 text-slate-600">
+        발주 가능 시간을 확인하는 중입니다...
+    </div>
+
+    <div class="p-8">
+
+        <div class="mb-8 bg-slate-50 p-6 rounded-xl border relative">
+
+            <div
+            id="loadingOverlay"
+            class="absolute inset-0 bg-slate-50 bg-opacity-80 z-10 flex flex-col justify-center items-center rounded-xl backdrop-blur-sm"
+            >
+            <div class="w-8 h-8 border-4 border-blue-400 border-t-blue-600 rounded-full animate-spin mb-2"></div>
+            <span id="loadingMessage" class="text-sm text-slate-600">시스템 연동 중...</span>
+        </div>
+
+        <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
+            발주 정보 입력
+        </h2>
+
+        <form id="orderForm"
+        class="grid grid-cols-2 gap-3 items-end md:grid-cols-[112px_80px_96px_96px_minmax(180px,1fr)_112px_80px]"
+        >
+
+        <div class="min-w-0">
+            <label class="block text-sm font-semibold text-slate-600 mb-1">월</label>
+            <select id="inputMonth" required class="w-full border rounded-lg px-3 py-2.5">
+            <option value="">선택</option>
+            <option value="1월">1월</option>
+            <option value="2월">2월</option>
+            <option value="3월">3월</option>
+            <option value="4월">4월</option>
+            <option value="5월">5월</option>
+            <option value="6월">6월</option>
+            <option value="7월">7월</option>
+            <option value="8월">8월</option>
+            <option value="9월">9월</option>
+            <option value="10월">10월</option>
+            <option value="11월">11월</option>
+            <option value="12월">12월</option>
+        </select>
+    </div>
+
+    <div class="min-w-0">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">일</label>
+        <input type="number" id="inputDay" required min="1" max="31" class="w-full border rounded-lg px-3 py-2.5" />
+    </div>
+
+    <div class="min-w-0">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">거래처</label>
+        <input type="text" id="inputClient" readonly class="w-full border rounded-lg px-3 py-2.5 bg-slate-100 text-slate-500" />
+    </div>
+
+    <div class="min-w-0">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">지역</label>
+        <input type="text" id="inputRegion" list="regionList" required maxlength="50" placeholder="지역" class="w-full border rounded-lg px-3 py-2.5" />
+        <datalist id="regionList"></datalist>
+    </div>
+
+    <div class="col-span-2 min-w-0 md:col-span-1">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">품명</label>
+        <input type="text" id="inputProduct" list="productList" required autocomplete="off" placeholder="품명 (자동완성)" class="w-full border rounded-lg px-3 py-2.5" />
+        <datalist id="productList"></datalist>
+    </div>
+
+    <div class="min-w-0">
+        <label class="block text-sm font-semibold text-slate-600 mb-1">수량</label>
+        <input type="number" id="inputQuantity" required min="1" step="1" placeholder="수량" class="w-full border rounded-lg px-3 py-2.5" />
+    </div>
+
+    <div class="min-w-0">
+        <button type="submit" id="btnAddOrder" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 px-3 rounded-lg h-[46px]">
+        추가
+    </button>
+</div>
+
+</form>
+</div>
+
+<div class="mb-8">
+    <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">입력내용 리스트</h2>
+    <div class="border rounded-xl table-container max-h-[350px] overflow-y-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-100 sticky top-0 z-10">
+                <tr>
+                    <th class="px-4 py-3 border-b text-center w-12">No</th>
+                    <th class="px-4 py-3 border-b">날짜</th>
+                    <th class="px-4 py-3 border-b">거래처</th>
+                    <th class="px-4 py-3 border-b">지역</th>
+                    <th class="px-4 py-3 border-b">품명</th>
+                    <th class="px-4 py-3 border-b">유종</th>
+                    <th class="px-4 py-3 border-b text-right">수량</th>
+                    <th class="px-4 py-3 border-b text-center w-20">취소</th>
+                </tr>
+            </thead>
+            <tbody id="orderListBody" class="bg-white divide-y">
+                <tr id="emptyMessage">
+                    <td colspan="8" class="px-4 py-12 text-center text-slate-400">아직 입력된 내역이 없습니다.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="pt-6 border-t flex justify-between items-center">
+    <button id="btnOpenManage" class="px-4 py-2.5 rounded-lg border text-blue-600 bg-blue-50 font-semibold">
+    발주내역 조회 / 수정
+</button>
+<div class="flex items-center gap-3">
+    <span class="text-sm text-slate-500 mr-2">현재 <strong id="totalCount" class="text-blue-600 text-lg">0</strong>건 대기</span>
+    <button id="btnSubmit" class="px-8 py-2.5 rounded-lg bg-blue-600 text-white font-semibold shadow-md">확인</button>
+</div>
+</div>
+</div>
+</div>
+
+<div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-70 backdrop-blur-sm hidden flex justify-center items-center z-[999]">
+    <div class="bg-white rounded-2xl w-11/12 max-w-sm p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-2 text-slate-800 text-center">거래처 로그인</h3>
+        <p class="text-xs text-slate-500 mb-5 text-center">발주 시스템 이용을 위해 거래처명과 비밀번호를 입력해주세요.</p>
+        <div class="space-y-3 mb-5">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">거래처</label>
+                <input type="text" id="loginClientName" placeholder="예: 경일 // 성규" class="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">지역 <span class="font-normal text-slate-400">(지역별 전용)</span></label>
+                <input type="text" id="loginClientRegion" placeholder="예: 부산 / 강원 / 경남" class="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">로그인 ID <span class="font-normal text-slate-400">(지역별 전용)</span></label>
+                <input type="text" id="loginClientId" placeholder="예: co_busan" class="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">비밀번호</label>
+                <input type="password" id="loginSecretCode" autocomplete="current-password" placeholder="비밀번호 입력" class="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+        </div>
+        <button type="button" id="btnLoginSubmit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-sm transition-colors shadow">로그인</button>
+    </div>
+</div>
+
+<div id="passwordModal" class="fixed inset-0 bg-slate-900 bg-opacity-70 backdrop-blur-sm hidden flex justify-center items-center z-[999]">
+    <div class="bg-white rounded-2xl w-11/12 max-w-sm p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-2 text-slate-800 text-center">비밀번호 변경</h3>
+        <p class="text-xs text-slate-500 mb-5 text-center">변경한 비밀번호는 다음 로그인부터 사용됩니다.<br>비밀번호는 암호화 되어서 저장됩니다.</p>
+        <div class="space-y-3 mb-5">
+            <input id="currentPassword" type="password" autocomplete="current-password" placeholder="현재 비밀번호" class="w-full border rounded-lg px-3 py-2.5 text-sm" />
+            <input id="newPassword" type="password" autocomplete="new-password" placeholder="새 비밀번호(4자 이상)" class="w-full border rounded-lg px-3 py-2.5 text-sm" />
+            <input id="newPasswordConfirm" type="password" autocomplete="new-password" placeholder="새 비밀번호 확인" class="w-full border rounded-lg px-3 py-2.5 text-sm" />
+        </div>
+        <div class="flex gap-2">
+            <button id="btnClosePasswordModal" class="flex-1 border rounded-lg py-2.5 text-sm">취소</button>
+            <button id="btnSavePassword" class="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-semibold">변경하기</button>
+        </div>
+    </div>
+</div>
+
+<div id="previewModal" class="fixed inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm hidden flex justify-center items-center z-[40]">
+    <div class="bg-white rounded-2xl w-11/12 max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="text-xl font-bold">최종 확인</h3>
+            <button class="close-modal-btn">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto bg-slate-50 flex-1">
+            <table class="w-full text-left text-sm text-slate-600 border bg-white">
+                <thead class="bg-slate-100">
+                    <tr>
+                        <th class="px-4 py-2 border-b">날짜</th>
+                        <th class="px-4 py-2 border-b">거래처</th>
+                        <th class="px-4 py-2 border-b">지역</th>
+                        <th class="px-4 py-2 border-b">품명</th>
+                        <th class="px-4 py-2 border-b">유종</th>
+                        <th class="px-4 py-2 border-b text-right">수량</th>
+                    </tr>
+                </thead>
+                <tbody id="previewListBody" class="divide-y"></tbody>
+            </table>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-between items-center">
+            <div id="modalGrandTotal" class="text-sm font-bold text-slate-700"></div>
+            <div class="flex gap-3">
+                <button class="close-modal-btn px-6 py-2 border rounded-lg">돌아가기</button>
+                <button id="confirmSubmitBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg">저장하기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="manageModal" class="fixed inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm hidden flex justify-center items-center z-[40]">
+    <div class="bg-white rounded-2xl w-11/12 max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-blue-700 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="text-xl font-bold">내역 조회 및 수정</h3>
+            <button class="close-modal-btn">✕</button>
+        </div>
+        <div class="bg-blue-50 px-6 py-4 border-b flex gap-3 items-center flex-wrap">
+            <input type="text" id="searchRegionInput" placeholder="지역(비우면 전체)" class="border rounded-lg px-3 py-2 text-sm w-32" />
+            <select id="searchMonthSelect" class="border rounded-lg px-3 py-2 text-sm">
+                <option value="">전체 월</option>
+                <option value="1월">1월</option>
+                <option value="2월">2월</option>
+                <option value="3월">3월</option>
+                <option value="4월">4월</option>
+                <option value="5월">5월</option>
+                <option value="6월">6월</option>
+                <option value="7월">7월</option>
+                <option value="8월">8월</option>
+                <option value="9월">9월</option>
+                <option value="10월">10월</option>
+                <option value="11월">11월</option>
+                <option value="12월">12월</option>
+            </select>
+            <input type="number" id="searchDayInput" min="1" max="31" placeholder="전체 일" class="border rounded-lg px-3 py-2 text-sm w-20" />
+            <button id="btnSearchSubmit" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm">불러오기</button>
+        </div>
+        <div class="p-6 overflow-y-auto bg-slate-50 flex-1 relative">
+            <div id="manageLoading" class="absolute inset-0 bg-white bg-opacity-80 hidden justify-center items-center z-10">
+                <div class="w-8 h-8 border-4 border-blue-400 border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <table class="w-full text-left text-sm text-slate-600 border bg-white">
+                <thead class="bg-slate-100">
+                    <tr>
+                        <th class="px-4 py-3 border-b">날짜</th>
+                        <th class="px-4 py-3 border-b">거래처</th>
+                        <th class="px-4 py-3 border-b">지역</th>
+                        <th class="px-4 py-3 border-b">품명</th>
+                        <th class="px-4 py-3 border-b">수량</th>
+                        <th class="px-4 py-3 border-b text-center">상태</th>
+                        <th class="px-4 py-3 border-b text-center">작업</th>
+                    </tr>
+                </thead>
+                <tbody id="manageListBody" class="divide-y">
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-slate-400">조건을 설정하고 불러와주세요.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="mt-4 flex justify-end">
+                <button id="btnOpenManageAdd" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed">+ 품목 추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="manageAddModal" class="fixed inset-0 bg-slate-900 bg-opacity-40 backdrop-blur-sm hidden flex justify-center items-center z-[45]">
+    <div class="bg-white rounded-2xl w-11/12 max-w-md shadow-2xl overflow-hidden">
+        <div class="bg-blue-700 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="text-lg font-bold">품목 추가</h3>
+            <button class="close-modal-btn" type="button">✕</button>
+        </div>
+        <div class="p-6 bg-slate-50 flex flex-col gap-4">
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">년</label>
+                    <input type="number" id="manageAddYear" min="2000" max="2100" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="연도" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">월</label>
+                    <select id="manageAddMonth" class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">선택</option>
+                        <option value="1월">1월</option>
+                        <option value="2월">2월</option>
+                        <option value="3월">3월</option>
+                        <option value="4월">4월</option>
+                        <option value="5월">5월</option>
+                        <option value="6월">6월</option>
+                        <option value="7월">7월</option>
+                        <option value="8월">8월</option>
+                        <option value="9월">9월</option>
+                        <option value="10월">10월</option>
+                        <option value="11월">11월</option>
+                        <option value="12월">12월</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">일</label>
+                    <input type="number" id="manageAddDay" min="1" max="31" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="일" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">지역</label>
+                <input type="text" id="manageAddRegion" list="regionList" maxlength="50" placeholder="지역" class="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">품명</label>
+                <input type="text" id="manageAddProduct" list="productList" autocomplete="off" placeholder="품명 (자동완성)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">수량</label>
+                <input type="number" id="manageAddQty" min="1" step="1" placeholder="수량" class="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
+            <button class="close-modal-btn px-5 py-2 border rounded-lg text-slate-600" type="button">취소</button>
+            <button id="btnManageAddSave" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">추가</button>
+        </div>
+    </div>
+</div>
+
+<div id="customAlertModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex justify-center items-center z-[9999]">
+    <div class="bg-white rounded-xl w-11/12 max-w-sm text-center">
+        <p id="customAlertMessage" class="p-6 font-medium whitespace-pre-line"></p>
+        <button id="alertOkButton" class="w-full py-3 bg-blue-600 text-white font-bold rounded-b-xl">확인</button>
+    </div>
+</div>
+
+<div id="customConfirmModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex justify-center items-center z-[9999]">
+    <div class="bg-white rounded-xl w-11/12 max-w-sm text-center">
+        <p id="customConfirmMessage" class="p-6 font-medium whitespace-pre-line"></p>
+        <div class="flex border-t">
+            <button id="confirmCancelButton" class="flex-1 py-3 bg-slate-50 border-r rounded-bl-xl text-slate-600">취소</button>
+            <button id="confirmOkButton" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-br-xl">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const WEB_APP_URL = window.location.origin;
+const CLIENT_CONTEXT = {};
+let CLIENT_TOKEN = '';
+let FIXED_CLIENT = '';
+let FIXED_ACCOUNT_REGION = '';
+let FIXED_LOGIN_ID = '';
+
+const state = {
+    products: [],
+    allowedRegions: [],
+    pendingOrders: [],
+    confirmCallback: null,
+    orderWindow: {
+        allowed: false,
+        startTime: '00:00',
+        cutoffTime: '16:00',
+        message: '발주 가능 시간을 확인하는 중입니다.'
+    },
+    orderWindowTimer: null
+};
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function toggleModal(id, show) {
+    const element = $(id);
+    if (element) element.classList.toggle('hidden', !show);
+}
+
+function setLoading(element, loading, text) {
+    if (!element) return;
+    element.disabled = loading;
+    element.textContent = loading ? '처리 중...' : text;
+}
+
+function setOverlay(show, message) {
+    $('loadingOverlay').style.display = show ? 'flex' : 'none';
+    if (message) $('loadingMessage').textContent = message;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function authHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + CLIENT_TOKEN,
+        'X-Auth-Token': CLIENT_TOKEN
+    };
+}
+
+async function api(path, options = {}) {
+    const res = await fetch(path, {
+        ...options,
+        headers: { ...authHeaders(), ...(options.headers || {}) }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+        throw new Error(data.message || '요청 처리 중 오류가 발생했습니다.');
+    }
+    return data;
+}
+
+function updateOrderWindowState(status) {
+    state.orderWindow = status || {
+        allowed: false,
+        startTime: '00:00',
+        cutoffTime: '16:00',
+        message: '발주 가능 시간을 확인할 수 없습니다.'
+    };
+    const statusEl = $('orderWindowStatus');
+    if (statusEl) {
+        statusEl.textContent = `${state.orderWindow.message} (${state.orderWindow.startTime}~${state.orderWindow.cutoffTime})`;
+        statusEl.className = state.orderWindow.allowed
+            ? 'mx-8 mt-4 rounded-lg border px-4 py-3 text-sm font-semibold bg-green-50 border-green-200 text-green-700'
+            : 'mx-8 mt-4 rounded-lg border px-4 py-3 text-sm font-semibold bg-red-50 border-red-200 text-red-700';
+    }
+    const addButton = $('btnAddOrder');
+    const previewButton = $('btnSubmit');
+    const saveButton = $('confirmSubmitBtn');
+    if (addButton) addButton.disabled = !state.orderWindow.allowed;
+    if (previewButton) previewButton.disabled = !state.orderWindow.allowed;
+    if (saveButton) saveButton.disabled = !state.orderWindow.allowed;
+    renderPendingOrders();
+}
+
+function isOrderWindowOpen() {
+    if (state.orderWindow.allowed) return true;
+    showAlert(state.orderWindow.message || '현재 발주 가능 시간이 아닙니다.');
+    return false;
+}
+
+async function loadOrderWindowStatus() {
+    try {
+        const status = await fetch('/api/order-window').then((res) => res.json());
+        updateOrderWindowState(status);
+    } catch (error) {
+        updateOrderWindowState({
+            allowed: false,
+            startTime: '00:00',
+            cutoffTime: '16:00',
+            message: '발주 가능 시간을 확인하지 못했습니다. 잠시 후 다시 시도하세요.'
+        });
+        console.error(error);
+    }
+}
+
+function showAlert(message) {
+    $('customAlertMessage').textContent = message;
+    toggleModal('customAlertModal', true);
+}
+
+function closeAlert() {
+    toggleModal('customAlertModal', false);
+}
+
+function showConfirm(message, callback) {
+    $('customConfirmMessage').textContent = message;
+    state.confirmCallback = callback;
+    toggleModal('customConfirmModal', true);
+}
+
+function closeConfirm(result) {
+    toggleModal('customConfirmModal', false);
+    const callback = state.confirmCallback;
+    state.confirmCallback = null;
+    if (result && typeof callback === 'function') callback();
+}
+
+function renderRegionPolicy() {
+    const regions = Array.isArray(state.allowedRegions) ? state.allowedRegions : [];
+    const list = $('regionList');
+    const input = $('inputRegion');
+    if (list) {
+        list.innerHTML = regions.map((region) => `<option value="${escapeHtml(region)}"></option>`).join('');
+    }
+    if (input && FIXED_ACCOUNT_REGION) {
+        input.value = FIXED_ACCOUNT_REGION;
+        input.readOnly = true;
+        input.setAttribute('aria-readonly', 'true');
+        input.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+        input.classList.remove('focus:border-blue-500');
+        return;
+    }
+    if (input) {
+        input.readOnly = false;
+        input.removeAttribute('aria-readonly');
+        input.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+    }
+}
+
+function renderProductDatalist() {
+    $('productList').innerHTML = state.products
+        .map((product) => `<option value="${escapeHtml(product.name)}"></option>`)
+        .join('');
+}
+
+function findSelectedProduct() {
+    const input = $('inputProduct').value.trim().replace(/\s/g, '');
+    return state.products.find((product) => product.name.replace(/\s/g, '') === input) || null;
+}
+
+function getProductPreviewInfo() {
+    const selected = findSelectedProduct();
+    if (selected) {
+        return { name: selected.name, oil: selected.oil || '미등록', isRegistered: true };
+    }
+    return { name: $('inputProduct').value.trim(), oil: '미등록', isRegistered: false };
+}
+
+async function loadProductData() {
+    try {
+        const result = await api('/api/client/products');
+        state.products = Array.isArray(result.products) ? result.products : [];
+        renderProductDatalist();
+        setOverlay(false);
+    } catch (error) {
+        setOverlay(false);
+        showAlert('품목 정보를 불러오지 못했습니다.\n' + (error.message || error));
+    }
+}
+
+function validateOrderInput() {
+    if (!isOrderWindowOpen()) return false;
+    const month = Number($('inputMonth').value.replace(/\D/g, ''));
+    const day = Number($('inputDay').value);
+    if (FIXED_ACCOUNT_REGION) $('inputRegion').value = FIXED_ACCOUNT_REGION;
+    const region = $('inputRegion').value.trim();
+    const product = $('inputProduct').value.trim();
+    const quantity = Number($('inputQuantity').value);
+    if (!month || !day) {
+        showAlert('월과 일을 입력해주세요.');
+        return false;
+    }
+    const lastDay = new Date(new Date().getFullYear(), month, 0).getDate();
+    if (day < 1 || day > lastDay) {
+        showAlert(`${month}월은 ${lastDay}일까지 입력할 수 있습니다.`);
+        return false;
+    }
+    if (!region) { showAlert('지역을 입력해주세요.'); return false; }
+    if (!product) { showAlert('품명을 입력해주세요.'); return false; }
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+        showAlert('수량은 1 이상의 정수로 입력해주세요.');
+        return false;
+    }
+    return true;
+}
+
+function updatePendingSummary() {
+    $('totalCount').textContent = state.pendingOrders.length;
+    $('emptyMessage').style.display = state.pendingOrders.length ? 'none' : 'table-row';
+}
+
+function renderPendingOrders() {
+    const tbody = $('orderListBody');
+    tbody.querySelectorAll('.order-row').forEach((row) => row.remove());
+    state.pendingOrders.forEach((order, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 order-row';
+        row.innerHTML = `
+            <td class="px-4 py-3 text-center font-medium">${index + 1}</td>
+            <td class="px-4 py-3">${escapeHtml(order.date)}</td>
+            <td class="px-4 py-3">${escapeHtml(order.client)}</td>
+            <td class="px-4 py-3">${escapeHtml(order.region)}</td>
+            <td class="px-4 py-3 font-semibold">${escapeHtml(order.product)}</td>
+            <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded ${order.isRegistered ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'} text-xs">
+                    ${escapeHtml(order.isRegistered ? (order.oil || '미등록') : '미등록')}
+                </span>
+            </td>
+            <td class="px-4 py-3 text-right">${escapeHtml(order.qty)}개</td>
+            <td class="px-4 py-3 text-center">
+                <button type="button" class="text-red-400 p-1 delete-pending-btn ${state.orderWindow.allowed ? '' : 'opacity-50 cursor-not-allowed'}" data-index="${index}" ${state.orderWindow.allowed ? '' : 'disabled'}>삭제</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    updatePendingSummary();
+}
+
+function addPendingOrder() {
+    if (!validateOrderInput()) return;
+    const productInfo = getProductPreviewInfo();
+    const year = new Date().getFullYear();
+    const month = $('inputMonth').value;
+    const day = $('inputDay').value;
+    state.pendingOrders.push({
+        date: `${year}년 ${month} ${day}일`,
+        client: FIXED_CLIENT,
+        region: $('inputRegion').value.trim(),
+        product: productInfo.name,
+        oil: productInfo.oil,
+        isRegistered: productInfo.isRegistered,
+        qty: Number($('inputQuantity').value)
+    });
+    const productInput = $('inputProduct');
+    const qtyInput = $('inputQuantity');
+    renderPendingOrders();
+    setTimeout(() => {
+        if (productInput) productInput.value = '';
+        if (qtyInput) qtyInput.value = '';
+        if (productInput) productInput.focus();
+    }, 0);
+}
+
+function removePendingOrder(index) {
+    if (!isOrderWindowOpen()) return;
+    state.pendingOrders.splice(index, 1);
+    renderPendingOrders();
+}
+
+function openPreview() {
+    if (!isOrderWindowOpen()) return;
+    if (!state.pendingOrders.length) {
+        showAlert('입력된 내역이 없습니다.');
+        return;
+    }
+    const grouped = {};
+    let grandTotal = 0;
+    state.pendingOrders.forEach((order) => {
+        const groupKey = order.region + '_' + order.date;
+        if (!grouped[groupKey]) grouped[groupKey] = { region: order.region, date: order.date, items: [], total: 0 };
+        grouped[groupKey].items.push(order);
+        grouped[groupKey].total += order.qty;
+        grandTotal += order.qty;
+    });
+    let html = '';
+    Object.values(grouped).forEach((group) => {
+        html += `
+            <tr class="bg-blue-50">
+                <td colspan="6" class="px-4 py-2 font-bold text-blue-900 text-xs">
+                    ${escapeHtml(group.region)} / ${escapeHtml(group.date)} (합계: ${group.total}개)
+                </td>
+            </tr>
+        `;
+        group.items.forEach((order) => {
+            html += `
+                <tr>
+                    <td class="px-4 py-2 border-b">${escapeHtml(order.date)}</td>
+                    <td class="px-4 py-2 border-b">${escapeHtml(order.client)}</td>
+                    <td class="px-4 py-2 border-b">${escapeHtml(order.region)}</td>
+                    <td class="px-4 py-2 border-b">${escapeHtml(order.product)}</td>
+                    <td class="px-4 py-2 border-b">${escapeHtml(order.oil || '미등록')}</td>
+                    <td class="px-4 py-2 border-b text-right">${escapeHtml(order.qty)}개</td>
+                </tr>
+            `;
+        });
+    });
+    $('previewListBody').innerHTML = html;
+    $('modalGrandTotal').textContent = `총 합계: ${grandTotal.toLocaleString()}개`;
+    toggleModal('previewModal', true);
+}
+
+async function saveOrders() {
+    const button = $('confirmSubmitBtn');
+    if (!isOrderWindowOpen()) return;
+    if (!state.pendingOrders.length) {
+        showAlert('저장할 발주가 없습니다.');
+        return;
+    }
+    const payload = state.pendingOrders.map((order) => [
+        order.date, order.client, order.region, order.product, order.oil, order.qty
+    ]);
+    setLoading(button, true, '저장하기');
+    try {
+        const result = await api('/api/client/orders', { method: 'POST', body: JSON.stringify({ orders: payload }) });
+        state.pendingOrders = [];
+        renderPendingOrders();
+        toggleModal('previewModal', false);
+        showAlert(`${result.count}건 저장되었습니다.`);
+    } catch (error) {
+        showAlert('저장 오류\n' + String(error.message || error).replace(/^(Error|Exception):\s*/i, ''));
+    } finally {
+        setLoading(button, false, '저장하기');
+    }
+}
+
+function openManageAddModal() {
+    if (!isOrderWindowOpen()) return;
+    const year = new Date().getFullYear();
+    ['manageAddYear', 'manageAddMonth', 'manageAddDay', 'manageAddRegion', 'manageAddProduct', 'manageAddQty'].forEach((id) => {
+        const el = $(id);
+        if (el) el.value = '';
+    });
+    $('manageAddYear').value = year;
+    if (FIXED_ACCOUNT_REGION) {
+        $('manageAddRegion').value = FIXED_ACCOUNT_REGION;
+        $('manageAddRegion').readOnly = true;
+        $('manageAddRegion').classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+    } else {
+        $('manageAddRegion').readOnly = false;
+        $('manageAddRegion').classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+    }
+    toggleModal('manageAddModal', true);
+    $('manageAddProduct')?.focus();
+}
+
+function saveManageAdd() {
+    if (!isOrderWindowOpen()) return;
+    const year = Number($('manageAddYear').value);
+    const monthText = $('manageAddMonth').value;
+    const day = Number($('manageAddDay').value);
+    const region = $('manageAddRegion').value.trim();
+    const product = $('manageAddProduct').value.trim();
+    const quantity = Number($('manageAddQty').value);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) { showAlert('올바른 연도를 입력해주세요.'); return; }
+    const month = Number(String(monthText).replace(/\D/g, ''));
+    if (!month || month < 1 || month > 12) { showAlert('월을 선택해주세요.'); return; }
+    const lastDay = new Date(year, month, 0).getDate();
+    if (!Number.isInteger(day) || day < 1 || day > lastDay) { showAlert(`${month}월은 ${lastDay}일까지 입력할 수 있습니다.`); return; }
+    if (!region) { showAlert('지역을 입력해주세요.'); return; }
+    if (!product) { showAlert('품명을 입력해주세요.'); return; }
+    if (!Number.isInteger(quantity) || quantity <= 0) { showAlert('수량은 1 이상의 정수로 입력해주세요.'); return; }
+    const button = $('btnManageAddSave');
+    showConfirm(`[ ${year}년 ${month}월 ${day}일 / ${region} / ${product} / ${quantity}개 ]\n이 내용으로 발주를 추가할까요?`, async () => {
+        setLoading(button, true, '추가');
+        const payload = [[`${year}년 ${month}월 ${day}일`, FIXED_CLIENT, region, product, '', quantity]];
+        try {
+            const result = await api('/api/client/orders', { method: 'POST', body: JSON.stringify({ orders: payload }) });
+            toggleModal('manageAddModal', false);
+            showAlert(`${result.count}건 추가되었습니다.`);
+            if ($('manageListBody').innerText.indexOf('조건을 설정하고') === -1) searchOrders();
+        } catch (error) {
+            showAlert('추가 오류\n' + String(error.message || error).replace(/^(Error|Exception):\s*/i, ''));
+        } finally {
+            setLoading(button, false, '추가');
+        }
+    });
+}
+
+function openManageModal() {
+    $('manageListBody').innerHTML = `<tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">조건을 설정하고 불러와주세요.</td></tr>`;
+    toggleModal('manageModal', true);
+}
+
+async function searchOrders() {
+    $('manageLoading').style.display = 'flex';
+    try {
+        const params = new URLSearchParams({
+            region: $('searchRegionInput').value,
+            month: $('searchMonthSelect').value,
+            day: $('searchDayInput').value
+        });
+        const orders = await api('/api/client/orders?' + params.toString());
+        renderManageOrders(Array.isArray(orders) ? orders : []);
+    } catch (error) {
+        showAlert('조회 오류\n' + (error.message || error));
+    } finally {
+        $('manageLoading').style.display = 'none';
+    }
+}
+
+function renderManageOrders(orders) {
+    if (!orders.length) {
+        $('manageListBody').innerHTML = `<tr><td colspan="7" class="text-center text-red-500 py-12">데이터가 없습니다.</td></tr>`;
+        return;
+    }
+    const grouped = orders.reduce((acc, order) => {
+        const groupKey = `${order.region}_${order.date}`;
+        if (!acc[groupKey]) acc[groupKey] = { region: order.region, date: order.date, items: [], total: 0 };
+        acc[groupKey].items.push(order);
+        acc[groupKey].total += Number(order.qty || 0);
+        return acc;
+    }, {});
+    let html = '';
+    Object.values(grouped).forEach((group) => {
+        html += `<tr class="bg-blue-50"><td colspan="7" class="px-4 py-2 font-bold text-blue-900 text-xs">${escapeHtml(group.region)} / ${escapeHtml(group.date)} (합계: ${group.total.toLocaleString()}개)</td></tr>`;
+        html += group.items.map((order) => {
+            const lockedByStatus = !state.orderWindow.allowed;
+            const locked = order.isConfirmed || order.editCount >= 2 || lockedByStatus;
+            const statusHtml = order.isConfirmed
+                ? '<span class="text-amber-700 bg-amber-100 px-2 py-1 rounded text-xs">확정</span>'
+                : lockedByStatus
+                    ? '<span class="text-red-700 bg-red-100 px-2 py-1 rounded text-xs">시간 마감</span>'
+                    : `<span class="px-2 py-1 rounded text-xs ${order.editCount >= 2 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">${order.editCount}/2회</span>`;
+            const actionHtml = locked
+                ? `<span class="text-slate-400 text-xs">${lockedByStatus ? '오늘 마감' : '수정불가'}</span>`
+                : `<button class="btn-update bg-emerald-500 text-white px-2 py-1 rounded text-xs mr-1" data-id="${escapeHtml(order.recordId)}">적용</button>
+                   <button class="btn-delete bg-red-400 text-white px-2 py-1 rounded text-xs" data-id="${escapeHtml(order.recordId)}">삭제</button>`;
+            return `<tr>
+                <td class="px-4 py-3">${escapeHtml(order.date)}</td>
+                <td class="px-4 py-3 font-bold">${escapeHtml(order.client)}</td>
+                <td class="px-4 py-3">${escapeHtml(order.region)}</td>
+                <td class="px-4 py-3">${escapeHtml(order.product)}</td>
+                <td class="px-4 py-3"><input type="number" min="1" step="1" class="manage-qty-input w-20 border px-2 py-1" value="${escapeHtml(order.qty)}" ${locked ? 'disabled' : ''} /></td>
+                <td class="px-4 py-3 text-center">${statusHtml}</td>
+                <td class="px-4 py-3 text-center">${actionHtml}</td>
+            </tr>`;
+        }).join('');
+    });
+    $('manageListBody').innerHTML = html;
+}
+
+function handleUpdateOrder(button) {
+    if (!isOrderWindowOpen()) return;
+    const recordId = button.dataset.id;
+    const input = button.closest('tr').querySelector('.manage-qty-input');
+    const newQty = Number(input.value);
+    if (!Number.isInteger(newQty) || newQty <= 0) {
+        showAlert('수량은 1 이상의 정수여야 합니다.');
+        return;
+    }
+    showConfirm(`수량을 [ ${newQty}개 ]로 수정할까요?`, async () => {
+        $('manageLoading').style.display = 'flex';
+        try {
+            const result = await api('/api/client/orders/' + encodeURIComponent(recordId), {
+                method: 'PATCH',
+                body: JSON.stringify({ qty: newQty })
+            });
+            if (result.success) {
+                showAlert('수정 완료');
+                searchOrders();
+            } else {
+                $('manageLoading').style.display = 'none';
+                showAlert(result.message);
+            }
+        } catch (error) {
+            $('manageLoading').style.display = 'none';
+            showAlert('수정 오류\n' + (error.message || error));
+        }
+    });
+}
+
+function handleDeleteOrder(button) {
+    if (!isOrderWindowOpen()) return;
+    const recordId = button.dataset.id;
+    showConfirm('정말 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.', async () => {
+        $('manageLoading').style.display = 'flex';
+        try {
+            const result = await api('/api/client/orders/' + encodeURIComponent(recordId), { method: 'DELETE' });
+            if (result.success) {
+                showAlert('삭제 완료');
+                searchOrders();
+            } else {
+                $('manageLoading').style.display = 'none';
+                showAlert(result.message);
+            }
+        } catch (error) {
+            $('manageLoading').style.display = 'none';
+            showAlert('삭제 오류\n' + (error.message || error));
+        }
+    });
+}
+
+async function handleLogin() {
+    const clientName = $('loginClientName').value.trim();
+    const clientRegion = $('loginClientRegion')?.value.trim() || '';
+    const loginId = $('loginClientId')?.value.trim() || '';
+    const secretCode = $('loginSecretCode').value.trim();
+    if (!clientName || !secretCode) {
+        showAlert('거래처명과 비밀번호를 모두 입력해주세요.');
+        return;
+    }
+    if ((clientRegion && !loginId) || (!clientRegion && loginId)) {
+        showAlert('지역별 계정은 지역과 로그인 ID를 모두 입력해주세요.');
+        return;
+    }
+    setLoading($('btnLoginSubmit'), true, '로그인');
+    try {
+        const res = await fetch('/api/auth/client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientName, secretCode, loginId, accountRegion: clientRegion })
+        }).then((r) => r.json());
+        if (res && res.success) {
+            sessionStorage.setItem('myAppToken', res.token);
+            sessionStorage.setItem('myClientName', res.client || clientName);
+            sessionStorage.setItem('myAccountRegion', res.accountRegion || '');
+            sessionStorage.setItem('myLoginId', res.loginId || '');
+            CLIENT_TOKEN = res.token;
+            FIXED_CLIENT = res.client || clientName;
+            FIXED_ACCOUNT_REGION = res.accountRegion || '';
+            FIXED_LOGIN_ID = res.loginId || '';
+            state.allowedRegions = Array.isArray(res.allowedRegions) ? res.allowedRegions : [];
+            toggleModal('loginModal', false);
+            initializePage();
+        } else {
+            showAlert(res.message || '로그인 실패: 거래처명 또는 비밀코드를 확인해주세요.');
+        }
+    } catch (error) {
+        showAlert('로그인 오류\n' + String(error.message || error).replace(/^(Error|Exception):\s*/i, ''));
+    } finally {
+        setLoading($('btnLoginSubmit'), false, '로그인');
+    }
+}
+
+function openChangePassword() {
+    ['currentPassword', 'newPassword', 'newPasswordConfirm'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+    toggleModal('passwordModal', true);
+    $('currentPassword')?.focus();
+}
+
+async function saveChangePassword() {
+    const currentPassword = $('currentPassword').value.trim();
+    const newPassword = $('newPassword').value.trim();
+    const confirmPassword = $('newPasswordConfirm').value.trim();
+    const button = $('btnSavePassword');
+    if (!currentPassword || !newPassword || !confirmPassword) { showAlert('현재 비밀번호와 새 비밀번호를 모두 입력해주세요.'); return; }
+    if (newPassword !== confirmPassword) { showAlert('새 비밀번호가 서로 일치하지 않습니다.'); return; }
+    if (newPassword.length < 4) { showAlert('새 비밀번호는 4자 이상이어야 합니다.'); return; }
+    setLoading(button, true, '변경하기');
+    try {
+        const result = await api('/api/client/password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        CLIENT_TOKEN = result.token;
+        FIXED_CLIENT = result.client || FIXED_CLIENT;
+        FIXED_ACCOUNT_REGION = result.accountRegion || FIXED_ACCOUNT_REGION;
+        FIXED_LOGIN_ID = result.loginId || FIXED_LOGIN_ID;
+        sessionStorage.setItem('myAppToken', CLIENT_TOKEN);
+        sessionStorage.setItem('myClientName', FIXED_CLIENT);
+        sessionStorage.setItem('myAccountRegion', FIXED_ACCOUNT_REGION);
+        sessionStorage.setItem('myLoginId', FIXED_LOGIN_ID);
+        window.location.href = WEB_APP_URL + '/order?token=' + encodeURIComponent(CLIENT_TOKEN);
+    } catch (error) {
+        showAlert('비밀번호 변경 오류\n' + (error.message || error));
+    } finally {
+        setLoading(button, false, '변경하기');
+    }
+}
+
+function handleLogout() {
+    showConfirm('로그아웃 하시겠습니까?', async () => {
+        const goLogin = () => {
+            sessionStorage.removeItem('myAppToken');
+            sessionStorage.removeItem('myClientName');
+            sessionStorage.removeItem('myAccountRegion');
+            sessionStorage.removeItem('myLoginId');
+            window.location.href = WEB_APP_URL + '/login';
+        };
+        try {
+            await api('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) });
+        } catch (error) {}
+        goLogin();
+    });
+}
+
+function initializeEvents() {
+    $('alertOkButton').addEventListener('click', closeAlert);
+    $('confirmCancelButton').addEventListener('click', () => closeConfirm(false));
+    $('confirmOkButton').addEventListener('click', () => closeConfirm(true));
+    document.querySelectorAll('.close-modal-btn').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            const modal = event.target.closest('.fixed');
+            if (modal) toggleModal(modal.id, false);
+        });
+    });
+    let composing = false;
+    ['inputProduct', 'inputQuantity', 'inputRegion', 'inputDay'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('compositionstart', () => { composing = true; });
+        el.addEventListener('compositionend', () => { composing = false; });
+    });
+    $('orderForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (composing) {
+            const once = () => {
+                composing = false;
+                $('orderForm').removeEventListener('compositionend', once);
+                addPendingOrder();
+            };
+            document.addEventListener('compositionend', once, { once: true });
+            return;
+        }
+        addPendingOrder();
+    });
+    $('orderListBody').addEventListener('click', (event) => {
+        const button = event.target.closest('.delete-pending-btn');
+        if (!button) return;
+        removePendingOrder(Number(button.dataset.index));
+    });
+    $('btnSubmit').addEventListener('click', openPreview);
+    $('confirmSubmitBtn').addEventListener('click', saveOrders);
+    $('btnOpenManage').addEventListener('click', openManageModal);
+    $('btnSearchSubmit').addEventListener('click', searchOrders);
+    $('btnOpenManageAdd').addEventListener('click', openManageAddModal);
+    $('btnManageAddSave').addEventListener('click', saveManageAdd);
+    $('manageAddQty').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') saveManageAdd();
+    });
+    $('manageListBody').addEventListener('click', (event) => {
+        const updateButton = event.target.closest('.btn-update');
+        const deleteButton = event.target.closest('.btn-delete');
+        if (updateButton) { handleUpdateOrder(updateButton); return; }
+        if (deleteButton) handleDeleteOrder(deleteButton);
+    });
+    $('btnLoginSubmit').addEventListener('click', handleLogin);
+    $('btnChangePassword').addEventListener('click', openChangePassword);
+    $('btnClosePasswordModal').addEventListener('click', () => toggleModal('passwordModal', false));
+    $('btnSavePassword').addEventListener('click', saveChangePassword);
+    $('btnLogout').addEventListener('click', handleLogout);
+    $('loginSecretCode').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') handleLogin();
+    });
+}
+
+function initializePage() {
+    $('badgeName').textContent = FIXED_CLIENT;
+    if ($('badgeRegion')) $('badgeRegion').textContent = FIXED_ACCOUNT_REGION ? '· ' + FIXED_ACCOUNT_REGION : '';
+    $('inputClient').value = FIXED_CLIENT;
+    renderRegionPolicy();
+    loadOrderWindowStatus();
+    if (!state.orderWindowTimer) state.orderWindowTimer = setInterval(loadOrderWindowStatus, 60000);
+    loadProductData();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+    initializeEvents();
+    const urlParams = new URLSearchParams(window.location.search);
+    let token = urlParams.get('token') || sessionStorage.getItem('myAppToken') || '';
+    if (!token) {
+        toggleModal('loginModal', true);
+        setOverlay(false);
+        return;
+    }
+    CLIENT_TOKEN = token;
+    try {
+        const session = await api('/api/session');
+        if (session.role !== 'CLIENT') throw new Error('거래처 토큰이 아닙니다.');
+        FIXED_CLIENT = session.client;
+        FIXED_ACCOUNT_REGION = session.accountRegion || '';
+        FIXED_LOGIN_ID = session.loginId || '';
+        state.allowedRegions = Array.isArray(session.allowedRegions) ? session.allowedRegions : [];
+        sessionStorage.setItem('myAppToken', CLIENT_TOKEN);
+        sessionStorage.setItem('myClientName', FIXED_CLIENT);
+        sessionStorage.setItem('myAccountRegion', FIXED_ACCOUNT_REGION);
+        sessionStorage.setItem('myLoginId', FIXED_LOGIN_ID);
+        toggleModal('loginModal', false);
+        initializePage();
+    } catch (error) {
+        sessionStorage.removeItem('myAppToken');
+        toggleModal('loginModal', true);
+        setOverlay(false);
+        showAlert('유효하지 않거나 만료된 토큰입니다. 다시 로그인해주세요.');
+    }
+});
+</script>
+</body>
+</html>

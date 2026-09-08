@@ -1,0 +1,24 @@
+name = "order-system"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+# wrangler d1 create hansan-order-system 실행 후 발급된 database_id 로 교체하세요.
+# wrangler dev --remote 를 쓰려면 실제 D1 database_id 가 필요합니다.
+[[d1_databases]]
+binding = "DB"
+database_name = ""
+database_id = ""
+
+[vars]
+ORDER_TIME_ZONE = "Asia/Seoul"
+ORDER_ENTRY_START_HOUR = "0"
+ORDER_ENTRY_CUTOFF_HOUR = "16"
+# TOKEN_SECRET = "change-me-in-production"
+
+GOOGLE_SERVICE_ACCOUNT_EMAIL = ""
+GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n\n-----END PRIVATE KEY-----\n"
+GOOGLE_SPREADSHEET_ID = ""
+GOOGLE_SHEET_NAME = "sheet1"
+
+[triggers]
+crons = ["0 18 * * *"]

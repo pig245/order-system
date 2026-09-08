@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발주 시스템 로그인</title>
+  <style>
+    body { font-family: 'Malgun Gothic', sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .login-card { background: #fff; padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); width: 100%; max-width: 380px; }
+    h2 { margin-top: 0; color: #1e293b; text-align: center; margin-bottom: 24px; font-size: 22px; }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; color: #475569; font-size: 13px; }
+    input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px; transition: border-color 0.2s; }
+    input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    button { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 6px; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .error-msg { color: #dc2626; font-size: 13px; text-align: center; margin-top: 14px; min-height: 18px; font-weight: 500; }
+    .mode-switch { text-align: center; margin-top: 20px; font-size: 13px; color: #64748b; }
+    .mode-switch a { color: #3b82f6; text-decoration: none; font-weight: bold; cursor: pointer; }
+    .mode-switch a:hover { text-decoration: underline; }
+    .hint { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2 id="formTitle">거래처 발주 시스템</h2>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+
+      <div id="clientFields">
+        <div class="form-group">
+          <label for="clientName">거래처<span style="font-weight:normal;color:#94a3b8">(경일, 성규)</span></label>
+          <input type="text" id="clientName" autocomplete="username" placeholder="등록된 거래처명을 입력하세요">
+        </div>
+        <div class="form-group">
+          <label for="clientRegion">지역<span style="font-weight:normal;color:#94a3b8">(지역 전용)</span></label>
+          <input type="text" id="clientRegion" autocomplete="off" placeholder="예: 강원 / 부산 / 양산">
+        </div>
+        <div class="form-group">
+          <label for="loginId">거래처+지역<span style="font-weight:normal;color:#94a3b8">(지역 전용)</span></label>
+          <input type="text" id="loginId" autocomplete="username" placeholder="예: 경일_강원 / 성규_부산">
+        </div>
+        <div class="form-group">
+          <label for="secretCode">비밀번호</label>
+          <input type="password" id="secretCode" autocomplete="current-password" placeholder="초기 비밀번호 1111">
+        </div>
+      </div>
+
+      <div id="adminFields" style="display: none;">
+        <div class="form-group">
+          <label for="adminCode">관리자 비밀코드</label>
+          <input type="password" id="adminCode" autocomplete="current-password">
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn">로그인</button>
+      <div id="errorMsg" class="error-msg"></div>
+    </form>
+
+    <div class="mode-switch">
+      <span id="switchText">관리자로 로그인하시나요?</span>
+      <a id="switchBtn" onclick="toggleMode()">관리자 로그인</a>
+    </div>
+
+  <script>
+    const WEB_APP_URL = window.location.origin;
+    let isAdminMode = false;
+
+    function toggleMode() {
+      isAdminMode = !isAdminMode;
+      const formTitle = document.getElementById('formTitle');
+      const clientFields = document.getElementById('clientFields');
+      const adminFields = document.getElementById('adminFields');
+      const submitBtn = document.getElementById('submitBtn');
+      const switchText = document.getElementById('switchText');
+      const switchBtn = document.getElementById('switchBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      errorMsg.innerText = '';
+
+      if (isAdminMode) {
+        formTitle.innerText = '관리자 대시보드';
+        clientFields.style.display = 'none';
+        adminFields.style.display = 'block';
+        submitBtn.style.background = '#0f172a';
+        switchText.innerText = '거래처로 로그인하시나요?';
+        switchBtn.innerText = '거래처 로그인';
+        document.getElementById('adminCode').required = true;
+        document.getElementById('clientName').required = false;
+        document.getElementById('clientRegion').required = false;
+        document.getElementById('loginId').required = false;
+        document.getElementById('secretCode').required = false;
+      } else {
+        formTitle.innerText = '거래처 발주 시스템';
+        clientFields.style.display = 'block';
+        adminFields.style.display = 'none';
+        submitBtn.style.background = '#3b82f6';
+        switchText.innerText = '관리자로 로그인하시나요?';
+        switchBtn.innerText = '관리자 로그인';
+        document.getElementById('adminCode').required = false;
+        document.getElementById('clientName').required = true;
+        document.getElementById('clientRegion').required = false;
+        document.getElementById('loginId').required = false;
+        document.getElementById('secretCode').required = true;
+      }
+    }
+
+    async function api(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || '로그인에 실패했습니다.');
+      }
+      return data;
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = '로그인 중...';
+      errorMsg.innerText = '';
+
+      try {
+        if (isAdminMode) {
+          const adminCode = document.getElementById('adminCode').value.trim();
+          const res = await api('/api/auth/admin', { adminCode });
+          sessionStorage.setItem('adminToken', res.token);
+          sessionStorage.removeItem('myAppToken');
+          window.location.href = WEB_APP_URL + '/admin?token=' + encodeURIComponent(res.token);
+        } else {
+          const clientName = document.getElementById('clientName').value.trim();
+          const clientRegion = document.getElementById('clientRegion').value.trim();
+          const loginId = document.getElementById('loginId').value.trim();
+          const secretCode = document.getElementById('secretCode').value.trim();
+          const res = await api('/api/auth/client', {
+            clientName,
+            secretCode,
+            loginId,
+            accountRegion: clientRegion
+          });
+          sessionStorage.setItem('myAppToken', res.token);
+          sessionStorage.setItem('myClientName', res.client || clientName);
+          sessionStorage.setItem('myAccountRegion', res.accountRegion || '');
+          sessionStorage.setItem('myLoginId', res.loginId || '');
+          window.location.href = WEB_APP_URL + '/order?token=' + encodeURIComponent(res.token);
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '로그인';
+        errorMsg.innerText = err.message || '오류가 발생했습니다.';
+      }
+    }
+  </script>
+</body>
+</html>

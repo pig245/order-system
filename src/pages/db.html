@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D1 데이터베이스 관리</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        rel="stylesheet"
+        as="style"
+        crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+    />
+
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #eef2ff;
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .db-grid {
+            max-height: 65vh;
+            overflow: auto;
+        }
+        .db-grid table {
+            min-width: 100%;
+            font-size: 12px;
+        }
+        .db-grid input {
+            min-width: 90px;
+        }
+        .db-grid td[data-bool="1"] {
+            background: #dcfce7;
+        }
+        .db-grid td[data-bool="0"] {
+            background: #fee2e2;
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-10 text-slate-800">
+
+<div class="max-w-7xl w-full mx-auto bg-white rounded-2xl shadow-xl border p-6 md:p-8">
+
+    <div class="mb-5 flex justify-between items-center gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-indigo-800">D1 데이터베이스 관리</h1>
+            <p class="text-sm text-slate-500 mt-1">Cloudflare D1 테이블을 조회하고 셀 값을 수정할 수 있습니다.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btnRefreshDb" class="text-xs border rounded-lg px-3 py-2 text-indigo-700 hover:bg-indigo-50 font-semibold">새로고침</button>
+            <a id="btnBack" href="/admin" class="text-xs border rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50 font-semibold no-underline">← 관리자 페이지</a>
+            <button id="btnLogout" class="text-xs border rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50">로그아웃</button>
+        </div>
+    </div>
+
+    <div id="authError" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 text-center">
+        관리자 토큰이 없습니다. <a href="/login" class="underline font-bold">로그인 페이지로 이동</a>
+    </div>
+
+    <div id="dbMain">
+        <div class="mb-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500">연결됨:</span>
+                <span id="dbConnection" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">확인 중...</span>
+            </div>
+            <p class="text-xs text-slate-400">⚠ 비밀번호 해시/솔트 컬럼은 직접 수정하지 마세요.</p>
+        </div>
+
+        <div id="dbTableTabs" class="flex flex-wrap gap-2 mb-3"></div>
+
+        <div class="db-grid bg-white border rounded-lg">
+            <table>
+                <thead class="bg-slate-100 sticky top-0"><tr id="dbHead"></tr></thead>
+                <tbody id="dbBody"><tr><td class="px-3 py-8 text-center text-slate-400">테이블을 선택하세요.</td></tr></tbody>
+            </table>
+        </div>
+
+        <div class="mt-2 flex justify-between items-center">
+            <p id="dbMeta" class="text-xs text-slate-500"></p>
+            <button id="btnResetFilters" class="text-xs text-slate-400 hover:text-slate-600">검색 지우기</button>
+        </div>
+    </div>
+</div>
+
+<div id="customAlertModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden flex justify-center items-center z-[9999]">
+    <div class="bg-white rounded-xl w-11/12 max-w-sm text-center">
+        <p id="customAlertMessage" class="p-6 font-medium whitespace-pre-line"></p>
+        <button id="alertOkButton" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-b-xl">확인</button>
+    </div>
+</div>
+
+<script>
+const WEB_APP_URL = window.location.origin;
+let ADMIN_TOKEN = '';
+const state = {
+    dbTable: 'orders',
+    dbColumns: [],
+    dbPk: 'id',
+    dbCache: null
+};
+
+function $(id) { return document.getElementById(id); }
+function safeOn(id, event, callback) { const el = $(id); if (el) el.addEventListener(event, callback); }
+function escapeHtml(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function showAlert(message) { $('customAlertMessage').textContent = message; toggleModal('customAlertModal', true); }
+function toggleModal(id, show) { const el = $(id); if (el) el.classList.toggle('hidden', !show); }
+function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_TOKEN, 'X-Auth-Token': ADMIN_TOKEN };
+}
+async function api(path, options = {}) {
+    const res = await fetch(path, { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) throw new Error(data.message || '요청 처리 중 오류가 발생했습니다.');
+    return data;
+}
+
+function formatCell(value, col) {
+    const v = value ?? '';
+    if (col === 'confirmed' || col === 'active' || col === 'edit_count') return v;
+    const s = String(v);
+    if (s.length > 60) return s.slice(0, 57) + '...';
+    return s;
+}
+
+async function loadDbTables() {
+    try {
+        const result = await api('/api/admin/db/tables');
+        $('dbConnection').textContent = result.success ? '정상' : '오류';
+        $('dbConnection').className = 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded';
+        const tabs = $('dbTableTabs');
+        tabs.innerHTML = (result.tables || []).map((table) => `
+            <button data-table="${escapeHtml(table.name)}" class="db-tab px-3 py-1.5 rounded-lg text-xs font-semibold ${state.dbTable === table.name ? 'bg-indigo-600 text-white' : 'bg-white border text-indigo-800'}">
+                ${escapeHtml(table.name)} (${table.count})
+            </button>
+        `).join('');
+        await loadDbTable(state.dbTable);
+    } catch (error) {
+        $('dbConnection').textContent = '오류';
+        $('dbConnection').className = 'text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded';
+        showAlert('테이블 목록을 불러오지 못했습니다.\n' + (error.message || error));
+    }
+}
+
+async function loadDbTable(table) {
+    state.dbTable = table;
+    try {
+        const result = await api('/api/admin/db/' + encodeURIComponent(table) + '?limit=200');
+        state.dbColumns = result.columns || [];
+        state.dbPk = result.columns.includes('id') ? 'id' : (result.columns[0] || 'id');
+        state.dbCache = result;
+        renderDbTable();
+    } catch (error) {
+        $('dbBody').innerHTML = `<tr><td class="px-3 py-8 text-center text-red-500">${escapeHtml(error.message || error)}</td></tr>`;
+    }
+}
+
+function renderDbTable() {
+    const result = state.dbCache;
+    if (!result) return;
+    $('dbHead').innerHTML = state.dbColumns.map((col) =>
+        `<th class="px-2 py-2 border-b text-left whitespace-nowrap">${escapeHtml(col)}</th>`
+    ).join('') + '<th class="px-2 py-2 border-b">저장</th>';
+    $('dbBody').innerHTML = (result.rows || []).map((row) => {
+        const cells = state.dbColumns.map((col) => {
+            const isPk = col === state.dbPk;
+            const value = row[col] ?? '';
+            const rawBool = (col === 'confirmed' || col === 'active') && (value === 1 || value === 0 || value === '1' || value === '0');
+            return `<td class="px-2 py-1 border-b" ${rawBool ? `data-bool="${value}"` : ''}>
+                <input data-col="${escapeHtml(col)}" ${isPk ? 'readonly' : ''} class="border rounded px-1 py-1 w-full bg-white" value="${escapeHtml(formatCell(value, col))}" placeholder="${isPk ? escapeHtml(value) : ''}" />
+            </td>`;
+        }).join('');
+        return `<tr data-id="${escapeHtml(row[state.dbPk] ?? '')}">${cells}<td class="px-2 py-1 border-b"><button class="btn-save-db text-xs bg-indigo-600 text-white px-2 py-1 rounded">저장</button></td></tr>`;
+    }).join('') || `<tr><td class="px-3 py-8 text-center text-slate-400" colspan="${state.dbColumns.length + 1}">데이터가 없습니다.</td></tr>`;
+    $('dbMeta').textContent = `${state.dbTable} · 총 ${result.total || 0}건 · ${(result.rows || []).length}건 표시`;
+    document.querySelectorAll('.db-tab').forEach((btn) => {
+        btn.className = `db-tab px-3 py-1.5 rounded-lg text-xs font-semibold ${btn.dataset.table === state.dbTable ? 'bg-indigo-600 text-white' : 'bg-white border text-indigo-800'}`;
+    });
+}
+
+async function saveDbRow(rowEl) {
+    const id = rowEl.dataset.id;
+    const payload = {};
+    rowEl.querySelectorAll('input[data-col]').forEach((input) => {
+        payload[input.dataset.col] = input.value;
+    });
+    await api('/api/admin/db/' + encodeURIComponent(state.dbTable) + '/' + encodeURIComponent(id), {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
+    showAlert('행을 저장했습니다.');
+    await loadDbTable(state.dbTable);
+}
+
+function handleLogout() {
+    api('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => {});
+    sessionStorage.removeItem('adminToken');
+    window.location.href = WEB_APP_URL + '/login';
+}
+
+function initializeEvents() {
+    const closeAlertBtn = $('alertOkButton');
+    if (closeAlertBtn) closeAlertBtn.addEventListener('click', () => toggleModal('customAlertModal', false));
+    safeOn('btnRefreshDb', 'click', loadDbTables);
+    safeOn('btnLogout', 'click', handleLogout);
+    safeOn('btnResetFilters', 'click', () => loadDbTable(state.dbTable));
+    const tabs = $('dbTableTabs');
+    if (tabs) {
+        tabs.addEventListener('click', (event) => {
+            const button = event.target.closest('.db-tab');
+            if (button) loadDbTable(button.dataset.table);
+        });
+    }
+    const dbBody = $('dbBody');
+    if (dbBody) {
+        dbBody.addEventListener('click', (event) => {
+            const button = event.target.closest('.btn-save-db');
+            if (button) {
+                saveDbRow(button.closest('tr')).catch((error) => showAlert('DB 저장 오류\n' + (error.message || error)));
+            }
+        });
+    }
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+    initializeEvents();
+    const params = new URLSearchParams(window.location.search);
+    ADMIN_TOKEN = params.get('token') || sessionStorage.getItem('adminToken') || '';
+    if (!ADMIN_TOKEN) {
+        $('dbMain').classList.add('hidden');
+        $('authError').classList.remove('hidden');
+        return;
+    }
+    try {
+        const session = await api('/api/session');
+        if (session.role !== 'ADMIN') throw new Error('관리자 토큰이 아닙니다.');
+        sessionStorage.setItem('adminToken', ADMIN_TOKEN);
+        $('dbMain').classList.remove('hidden');
+        await loadDbTables();
+    } catch (error) {
+        sessionStorage.removeItem('adminToken');
+        $('dbMain').classList.add('hidden');
+        $('authError').classList.remove('hidden');
+    }
+});
+</script>
+</body>
+</html>
